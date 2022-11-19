@@ -4,16 +4,18 @@ import jakarta.jws.WebService;
 
 import java.sql.*;
 
-import binotify.DBHandler;
-
 @WebService(endpointInterface = "binotify.security.Security")
 public class SecurityImplementation extends Security {
+    private Connection db_conn;
+
+    public SecurityImplementation(Connection db_conn) {
+        this.db_conn = db_conn;
+    }
+
     @Override
     public String addLogging(String description, String IP, String endpoint) {
         try {
-            DBHandler db = new DBHandler();
-            Connection conn = db.getConnection();
-            Statement statement = conn.createStatement();
+            Statement statement = this.db_conn.createStatement();
             String sql = "INSERT INTO logging(description, IP, endpoint)"
                 + "VALUES ('%s', '%s', '%s')";
             String formattedSql = String.format(sql, description, IP, endpoint);
