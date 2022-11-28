@@ -28,7 +28,7 @@ public class Subscription implements ISubscription {
         try {
             Statement statement = this.db_conn.createStatement();
             String sql = "INSERT INTO subscription(creator_id, subscriber_id, status)"
-                    + "VALUES (%d, %d, %d)";
+                    + "VALUES (%d, %d, '%s')";
             String formattedSql = String.format(sql, reqSub.creatorId, reqSub.subscriberId, "PENDING");
             int count = statement.executeUpdate(formattedSql);
             if (count == 1) {
@@ -79,8 +79,8 @@ public class Subscription implements ISubscription {
             List<SubscriptionEntity> listResp = new ArrayList<SubscriptionEntity>();
             while (resultSet.next()) {
                 listResp.add(new SubscriptionEntity(
-                        resultSet.getString("creator_id"),
-                        resultSet.getString("subscriber_id"),
+                        resultSet.getInt("creator_id"),
+                        resultSet.getInt("subscriber_id"),
                         resultSet.getString("status")
                 ));
             }
