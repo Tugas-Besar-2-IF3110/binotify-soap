@@ -10,6 +10,6 @@ public class ListRequestSubscriptionResp extends BaseResponse {
 
     public ListRequestSubscriptionResp(boolean success, String message, List<SubscriptionEntity> list) {
         super(success, message);
-        this.list.elements = list;
+        this.list = new ListRequestSubscriptionWrapper(list);
     }
 }
