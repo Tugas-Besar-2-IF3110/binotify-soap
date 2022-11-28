@@ -27,7 +27,7 @@ public class Subscription implements ISubscription {
     public RequestSubscriptionResp requestSubscription(RequestSubscriptionReq reqSub) {
         try {
             Statement statement = this.db_conn.createStatement();
-            String sql = "INSERT INTO subscription(creator_id, subscriber_id, status)"
+            String sql = "INSERT INTO subscription(creator_id, subscriber_id, status) "
                     + "VALUES (%d, %d, '%s')";
             String formattedSql = String.format(sql, reqSub.creatorId, reqSub.subscriberId, "PENDING");
             int count = statement.executeUpdate(formattedSql);
@@ -47,10 +47,10 @@ public class Subscription implements ISubscription {
         try {
             Statement statement = this.db_conn.createStatement();
             String sql =
-                    "UPDATE subscription" +
-                    "SET status = '%s'" +
-                    "WHERE" +
-                    "creator_id = %d" +
+                    "UPDATE subscription " +
+                    "SET status = '%s' " +
+                    "WHERE " +
+                    "creator_id = %d " +
                     "AND subscriber_id = %d";
 
             String appOrRejString = appOrRej.approve ? "ACCEPTED": "REJECTED";
