@@ -50,8 +50,8 @@ public class Subscription implements ISubscription {
                     "UPDATE subscription" +
                     "SET status = '%s'" +
                     "WHERE" +
-                    "creator_id = '%s" +
-                    "AND subscriber_id = '%s";
+                    "creator_id = '%s'" +
+                    "AND subscriber_id = '%s'";
 
             String appOrRejString = appOrRej.approve ? "ACCEPTED": "REJECTED";
             String formattedSql = String.format(sql, appOrRejString, appOrRej.creatorId, appOrRej.subscriberId);
