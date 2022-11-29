@@ -78,7 +78,7 @@ public class Subscription implements ISubscription {
             String formattedSql = String.format(sql, appOrRejString, appOrRej.creatorId, appOrRej.subscriberId);
             int count = statement.executeUpdate(formattedSql);
             if (count == 1) {
-                this.callbackUpdateRequest(appOrRej.creatorId, appOrRej.subscriberId, "REJECTED");
+                this.callbackUpdateRequest(appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
                 String message = appOrRejString + " subscription successfully";
                 return new ApproveOrRejectSubscriptionResp(true, message, appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
             } else {

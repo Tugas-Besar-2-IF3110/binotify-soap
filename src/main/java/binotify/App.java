@@ -26,7 +26,7 @@ public class App
 
 //        Endpoint.publish(System.getProperty("BASE_URL") + "/logging", new SecurityImplementation(db_conn));
 //        Endpoint.publish(System.getProperty("BASE_URL") + "/test", new Demo(db_conn));
-//        Endpoint.publish(System.getProperty("BASE_URL") + "/subscription", new Subscription(db_conn));
+        Endpoint.publish(System.getProperty("BASE_URL") + "/subscription", new Subscription(db_conn));
     }
 
 
