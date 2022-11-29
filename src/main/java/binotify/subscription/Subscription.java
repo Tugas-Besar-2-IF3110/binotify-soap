@@ -55,6 +55,10 @@ public class Subscription implements ISubscription {
 
     @Override
     public ApproveOrRejectSubscriptionResp approveOrRejectSubscription(ApproveOrRejectSubscriptionReq appOrRej) {
+        if (!System.getProperty("BINOTIFY_REST_API_KEY").equals(appOrRej.API_KEY)) {
+            return new ApproveOrRejectSubscriptionResp(false, "Not Authorized", null, null, null);
+        }
+
         try {
             Statement statement = this.db_conn.createStatement();
             String sql =
@@ -83,6 +87,10 @@ public class Subscription implements ISubscription {
 
     @Override
     public ListRequestSubscriptionResp listRequestSubscription(ListRequestSubscriptionReq listReqSub) {
+        if (!System.getProperty("BINOTIFY_REST_API_KEY").equals(listReqSub.API_KEY)) {
+            return new ListRequestSubscriptionResp(false, "Not Authorized", null);
+        }
+
         try {
             Statement statement = this.db_conn.createStatement();
             String sql = "SELECT * FROM subscription WHERE status = 'PENDING'";
