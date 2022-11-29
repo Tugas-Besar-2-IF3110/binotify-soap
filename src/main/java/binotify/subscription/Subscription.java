@@ -8,15 +8,23 @@ import binotify.request.RequestSubscriptionReq;
 import binotify.response.ApproveOrRejectSubscriptionResp;
 import binotify.response.ListRequestSubscriptionResp;
 import binotify.response.RequestSubscriptionResp;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.jws.WebService;
 import jakarta.xml.ws.WebServiceContext;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.*;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @WebService(endpointInterface = "binotify.subscription.ISubscription")
 public class Subscription implements ISubscription {
@@ -48,7 +56,7 @@ public class Subscription implements ISubscription {
                 return new RequestSubscriptionResp(true, "Subscription request failed", reqSub.creatorId, reqSub.subscriberId, null);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             return new RequestSubscriptionResp(false, e.getMessage(), null, null, null);
         }
     }
@@ -72,6 +80,7 @@ public class Subscription implements ISubscription {
             String formattedSql = String.format(sql, appOrRejString, appOrRej.creatorId, appOrRej.subscriberId);
             int count = statement.executeUpdate(formattedSql);
             if (count == 1) {
+                this.callbackUpdateRequest(appOrRej.creatorId, appOrRej.subscriberId, "REJECTED");
                 String message = appOrRejString + " subscription successfully";
                 return new ApproveOrRejectSubscriptionResp(true, message, appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
             } else {
@@ -112,5 +121,30 @@ public class Subscription implements ISubscription {
             ListRequestSubscriptionResp resp = new ListRequestSubscriptionResp(false, e.getMessage(), null);
             return resp;
         }
+    }
+
+    public void callbackUpdateRequest(int creatorId, int subscriberId, String status) throws IOException, InterruptedException {
+        ObjectMapper mapper = new ObjectMapper();
+        LinkedHashMap<String, Object> params = new LinkedHashMap<String, Object>();
+        params.put("creator_id", creatorId);
+        params.put("subscriber_id", subscriberId);
+        params.put("status", status);
+
+        String postDataString = mapper.writeValueAsString(params);
+        System.out.println(postDataString);
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .header("Authorization", System.getProperty("API_KEY"))
+                .uri(URI.create(System.getProperty("BINOTIFY_APP_CALLBACK_URL")))
+                .POST(HttpRequest.BodyPublishers.ofString(postDataString))
+                .build();
+
+        HttpResponse<String> response = client.send(request,
+                HttpResponse.BodyHandlers.ofString());
+
+        System.out.println(response.statusCode());
+        System.out.println(response.body());
+        Map<String,Object> map = mapper.readValue(response.body(), Map.class);
     }
 }
