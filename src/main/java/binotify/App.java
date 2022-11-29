@@ -1,14 +1,13 @@
 package binotify;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -26,9 +25,9 @@ public class App
         Connection db_conn = db.getConnection();
 
 //        Endpoint.publish(System.getProperty("BASE_URL") + "/logging", new SecurityImplementation(db_conn));
-        Endpoint.publish(System.getProperty("BASE_URL") + "/test", new Demo(db_conn));
-        Endpoint.publish(System.getProperty("BASE_URL") + "/subscription", new Subscription(db_conn));
-
+//        Endpoint.publish(System.getProperty("BASE_URL") + "/test", new Demo(db_conn));
+//        Endpoint.publish(System.getProperty("BASE_URL") + "/subscription", new Subscription(db_conn));
     }
+
 
 }

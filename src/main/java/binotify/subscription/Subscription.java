@@ -13,14 +13,12 @@ import jakarta.annotation.Resource;
 import jakarta.jws.WebService;
 import jakarta.xml.ws.WebServiceContext;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -123,28 +121,74 @@ public class Subscription implements ISubscription {
         }
     }
 
-    public void callbackUpdateRequest(int creatorId, int subscriberId, String status) throws IOException, InterruptedException {
-        ObjectMapper mapper = new ObjectMapper();
-        LinkedHashMap<String, Object> params = new LinkedHashMap<String, Object>();
-        params.put("creator_id", creatorId);
-        params.put("subscriber_id", subscriberId);
-        params.put("status", status);
+    public static void callbackUpdateRequest(int creatorId, int subscriberId, String status) throws IOException, InterruptedException {
+//        ObjectMapper mapper = new ObjectMapper();
+//        HashMap<String, Object> params = new HashMap<>();
+//        params.put("creator_id", creatorId);
+//        params.put("subscriber_id", subscriberId);
+//        params.put("status", status);
+//
+//        String postDataString = mapper.writeValueAsString(getFormDataAsString(params)).replace(',', '&').replace(':', '=');
+//
+//        System.out.println(postDataString);
+//
+//        HttpClient client = HttpClient.newHttpClient();
+//        HttpRequest request = HttpRequest.newBuilder()
+////                .header("Content-Type", "application/json")
+//                .header("Authorization", System.getProperty("API_KEY"))
+//                .uri(URI.create(System.getProperty("BINOTIFY_APP_CALLBACK_URL")))
+//                .POST(HttpRequest.BodyPublishers.byt("param1=a&param2=b&param3=c".getBytes(StandardCharsets.UTF_8)))
+//                .build();
+//
+//        HttpResponse<String> response = client.send(request,
+//                HttpResponse.BodyHandlers.ofString());
+//
+//        System.out.println(response.statusCode());
+//        System.out.println(response.body());
+//        Map<String,Object> map = mapper.readValue(response.body(), Map.class);
 
-        String postDataString = mapper.writeValueAsString(params);
-        System.out.println(postDataString);
+        URL url = new URL(System.getProperty("BINOTIFY_APP_CALLBACK_URL"));
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("POST");
+        con.setRequestProperty("Authorization", System.getProperty("API_KEY"));
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("creator_id", creatorId);
+        parameters.put("subscriber_id", subscriberId);
+        parameters.put("status", status);
 
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .header("Authorization", System.getProperty("API_KEY"))
-                .uri(URI.create(System.getProperty("BINOTIFY_APP_CALLBACK_URL")))
-                .POST(HttpRequest.BodyPublishers.ofString(postDataString))
-                .build();
+        con.setDoOutput(true);
+        DataOutputStream out = new DataOutputStream(con.getOutputStream());
+        out.writeBytes(getFormDataAsString(parameters));
+        out.flush();
+        out.close();
 
-        HttpResponse<String> response = client.send(request,
-                HttpResponse.BodyHandlers.ofString());
+        con.setConnectTimeout(5000);
+        con.setReadTimeout(5000);
 
-        System.out.println(response.statusCode());
-        System.out.println(response.body());
-        Map<String,Object> map = mapper.readValue(response.body(), Map.class);
+        BufferedReader in = new BufferedReader(
+                new InputStreamReader(con.getInputStream()));
+
+        String inputLine;
+        StringBuffer content = new StringBuffer();
+        while ((inputLine = in.readLine()) != null) {
+            content.append(inputLine);
+        }
+
+        in.close();
+        System.out.println(content.toString());
+
+    }
+
+    private static String getFormDataAsString(Map<String, Object> formData) {
+        StringBuilder formBodyBuilder = new StringBuilder();
+        for (Map.Entry<String, Object> singleEntry : formData.entrySet()) {
+            if (formBodyBuilder.length() > 0) {
+                formBodyBuilder.append("&");
+            }
+            formBodyBuilder.append(URLEncoder.encode(singleEntry.getKey(), StandardCharsets.UTF_8));
+            formBodyBuilder.append("=");
+            formBodyBuilder.append(URLEncoder.encode(singleEntry.getValue().toString(), StandardCharsets.UTF_8));
+        }
+        return formBodyBuilder.toString();
     }
 }
