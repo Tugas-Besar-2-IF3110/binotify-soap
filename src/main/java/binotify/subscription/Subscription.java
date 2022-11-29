@@ -3,11 +3,14 @@ package binotify.subscription;
 import binotify.entity.SubscriptionEntity;
 import binotify.request.ApproveOrRejectSubscriptionReq;
 import binotify.request.ListRequestSubscriptionReq;
+import binotify.request.RequestHeader;
 import binotify.request.RequestSubscriptionReq;
 import binotify.response.ApproveOrRejectSubscriptionResp;
 import binotify.response.ListRequestSubscriptionResp;
 import binotify.response.RequestSubscriptionResp;
+import jakarta.annotation.Resource;
 import jakarta.jws.WebService;
+import jakarta.xml.ws.WebServiceContext;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -17,6 +20,10 @@ import java.util.List;
 
 @WebService(endpointInterface = "binotify.subscription.ISubscription")
 public class Subscription implements ISubscription {
+    @Resource
+    private WebServiceContext ctx;
+
+
     private Connection db_conn;
 
     public Subscription(Connection db_conn) {
@@ -25,6 +32,10 @@ public class Subscription implements ISubscription {
 
     @Override
     public RequestSubscriptionResp requestSubscription(RequestSubscriptionReq reqSub) {
+        if (!System.getProperty("BINOTIFY_APP_API_KEY").equals(reqSub.API_KEY)) {
+            return new RequestSubscriptionResp(false, "Not Authorized", null, null, null);
+        }
+
         try {
             Statement statement = this.db_conn.createStatement();
             String sql = "INSERT INTO subscription(creator_id, subscriber_id, status) "
