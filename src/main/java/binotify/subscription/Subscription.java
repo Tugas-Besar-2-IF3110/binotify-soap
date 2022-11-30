@@ -135,7 +135,6 @@ public class Subscription implements ISubscription {
                     + " AND subscriber_id = " + valSub.subscriberId;
             ResultSet resultSet = statement.executeQuery(sql);
 
-            List<SubscriptionEntity> listResp = new ArrayList<SubscriptionEntity>();
             SubscriptionEntity subscription = null;
             if (resultSet.next()) {
                 subscription = new SubscriptionEntity(
