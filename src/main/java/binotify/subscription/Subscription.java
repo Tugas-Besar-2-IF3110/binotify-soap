@@ -2,10 +2,8 @@ package binotify.subscription;
 
 import binotify.entity.SubscriptionEntity;
 import binotify.request.*;
-import binotify.response.ApproveOrRejectSubscriptionResp;
-import binotify.response.ListRequestSubscriptionResp;
-import binotify.response.RequestSubscriptionResp;
-import binotify.response.ValidateSubscriptionResp;
+import binotify.response.*;
+import binotify.security.Logger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.jws.WebService;
@@ -20,24 +18,27 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @WebService(endpointInterface = "binotify.subscription.ISubscription")
 public class Subscription implements ISubscription {
-    @Resource
-    private WebServiceContext ctx;
-
-
     private Connection db_conn;
+    private Logger logger;
 
     public Subscription(Connection db_conn) {
         this.db_conn = db_conn;
+        this.logger = new Logger(db_conn);
     }
 
     @Override
     public RequestSubscriptionResp requestSubscription(RequestSubscriptionReq reqSub) {
+        LocalDateTime timestamp = LocalDateTime.now();
+        RequestSubscriptionReq req = reqSub;
+        RequestSubscriptionResp resp = null;
+
         if (!System.getProperty("BINOTIFY_APP_API_KEY").equals(reqSub.API_KEY)) {
-            return new RequestSubscriptionResp(false, "Not Authorized", null, null, null);
+            resp = new RequestSubscriptionResp(false, "Not Authorized", null, null, null);
         }
 
         try {
@@ -47,20 +48,26 @@ public class Subscription implements ISubscription {
             String formattedSql = String.format(sql, reqSub.creatorId, reqSub.subscriberId, "PENDING");
             int count = statement.executeUpdate(formattedSql);
             if (count == 1) {
-                return new RequestSubscriptionResp(true, "Added new subscription request with status: PENDING", reqSub.creatorId, reqSub.subscriberId, "PENDING");
+                resp = new RequestSubscriptionResp(true, "Added new subscription request with status: PENDING", reqSub.creatorId, reqSub.subscriberId, "PENDING");
             } else {
-                return new RequestSubscriptionResp(true, "Subscription request failed", reqSub.creatorId, reqSub.subscriberId, null);
+                resp = new RequestSubscriptionResp(true, "Subscription request failed", reqSub.creatorId, reqSub.subscriberId, null);
             }
         } catch (Exception e) {
 //            e.printStackTrace();
-            return new RequestSubscriptionResp(false, e.getMessage(), null, null, null);
+            resp = new RequestSubscriptionResp(false, e.getMessage(), null, null, null);
         }
+        this.logger.generateLogging(timestamp, req, resp);
+        return resp;
     }
 
     @Override
     public ApproveOrRejectSubscriptionResp approveOrRejectSubscription(ApproveOrRejectSubscriptionReq appOrRej) {
+        LocalDateTime timestamp = LocalDateTime.now();
+        ApproveOrRejectSubscriptionReq req = appOrRej;
+        ApproveOrRejectSubscriptionResp resp = null;
+
         if (!System.getProperty("BINOTIFY_REST_API_KEY").equals(appOrRej.API_KEY)) {
-            return new ApproveOrRejectSubscriptionResp(false, "Not Authorized", null, null, null);
+            resp = new ApproveOrRejectSubscriptionResp(false, "Not Authorized", null, null, null);
         }
 
         try {
@@ -82,22 +89,28 @@ public class Subscription implements ISubscription {
                 if (!successCallback) {
                     message += " but callback failed";
                 }
-                return new ApproveOrRejectSubscriptionResp(true, message, appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
+                resp = new ApproveOrRejectSubscriptionResp(true, message, appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
             } else {
                 String message = appOrRejString + " subscription failed";
-                return new ApproveOrRejectSubscriptionResp(false, message, appOrRej.creatorId, appOrRej.subscriberId, null);
+                resp = new ApproveOrRejectSubscriptionResp(false, message, appOrRej.creatorId, appOrRej.subscriberId, null);
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            return new ApproveOrRejectSubscriptionResp(false, e.getMessage(), null, null, null);
+            resp = new ApproveOrRejectSubscriptionResp(false, e.getMessage(), null, null, null);
         }
+        this.logger.generateLogging(timestamp, req, resp);
+        return resp;
     }
 
     @Override
     public ListRequestSubscriptionResp listRequestSubscription(ListRequestSubscriptionReq listReqSub) {
+        LocalDateTime timestamp = LocalDateTime.now();
+        ListRequestSubscriptionReq req = listReqSub;
+        ListRequestSubscriptionResp resp = null;
+
         if (!System.getProperty("BINOTIFY_REST_API_KEY").equals(listReqSub.API_KEY)) {
-            return new ListRequestSubscriptionResp(false, "Not Authorized", null);
+            resp = new ListRequestSubscriptionResp(false, "Not Authorized", null);
         }
 
         try {
@@ -113,20 +126,24 @@ public class Subscription implements ISubscription {
                 ));
             }
             String message = "Subscription request list fetched successfully";
-            ListRequestSubscriptionResp resp = new ListRequestSubscriptionResp(true, message, listResp);
-            return resp;
+            resp = new ListRequestSubscriptionResp(true, message, listResp);
 
         } catch (Exception e) {
             e.printStackTrace();
-            ListRequestSubscriptionResp resp = new ListRequestSubscriptionResp(false, e.getMessage(), null);
-            return resp;
+            resp = new ListRequestSubscriptionResp(false, e.getMessage(), null);
         }
+        this.logger.generateLogging(timestamp, req, resp);
+        return resp;
     }
 
     @Override
     public ValidateSubscriptionResp validateSubscription(ValidateSubscriptionReq valSub) {
+        LocalDateTime timestamp = LocalDateTime.now();
+        ValidateSubscriptionReq req = valSub;
+        ValidateSubscriptionResp resp = null;
+
         if (!System.getProperty("BINOTIFY_REST_API_KEY").equals(valSub.API_KEY)) {
-            return new ValidateSubscriptionResp(false, "Not Authorized", null, null, null);
+            resp = new ValidateSubscriptionResp(false, "Not Authorized", null, null, null);
         }
 
         try {
@@ -146,14 +163,14 @@ public class Subscription implements ISubscription {
             String message = "Subscription validation fetched successfully";
             boolean subscribed = subscription != null && subscription.status.equals("ACCEPTED");
 
-            ValidateSubscriptionResp resp = new ValidateSubscriptionResp(true, message, valSub.creatorId, valSub.subscriberId, subscribed);
-            return resp;
+            resp = new ValidateSubscriptionResp(true, message, valSub.creatorId, valSub.subscriberId, subscribed);
 
         } catch (Exception e) {
             e.printStackTrace();
-            ValidateSubscriptionResp resp = new ValidateSubscriptionResp(false, e.getMessage(), null, null, null);
-            return resp;
+            resp = new ValidateSubscriptionResp(false, e.getMessage(), null, null, null);
         }
+        this.logger.generateLogging(timestamp, req, resp);
+        return resp;
     }
 
     public boolean callbackUpdateRequest(int creatorId, int subscriberId, String status) {
