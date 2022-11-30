@@ -1,13 +1,11 @@
 package binotify.subscription;
 
 import binotify.entity.SubscriptionEntity;
-import binotify.request.ApproveOrRejectSubscriptionReq;
-import binotify.request.ListRequestSubscriptionReq;
-import binotify.request.RequestHeader;
-import binotify.request.RequestSubscriptionReq;
+import binotify.request.*;
 import binotify.response.ApproveOrRejectSubscriptionResp;
 import binotify.response.ListRequestSubscriptionResp;
 import binotify.response.RequestSubscriptionResp;
+import binotify.response.ValidateSubscriptionResp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.jws.WebService;
@@ -121,6 +119,40 @@ public class Subscription implements ISubscription {
         } catch (Exception e) {
             e.printStackTrace();
             ListRequestSubscriptionResp resp = new ListRequestSubscriptionResp(false, e.getMessage(), null);
+            return resp;
+        }
+    }
+
+    @Override
+    public ValidateSubscriptionResp validateSubscription(ValidateSubscriptionReq valSub) {
+        if (!System.getProperty("BINOTIFY_REST_API_KEY").equals(valSub.API_KEY)) {
+            return new ValidateSubscriptionResp(false, "Not Authorized", null, null, null);
+        }
+
+        try {
+            Statement statement = this.db_conn.createStatement();
+            String sql = "SELECT * FROM subscription WHERE creator_id = " + valSub.creatorId
+                    + " AND subscriber_id = " + valSub.subscriberId;
+            ResultSet resultSet = statement.executeQuery(sql);
+
+            List<SubscriptionEntity> listResp = new ArrayList<SubscriptionEntity>();
+            SubscriptionEntity subscription = null;
+            if (resultSet.next()) {
+                subscription = new SubscriptionEntity(
+                        resultSet.getInt("creator_id"),
+                        resultSet.getInt("subscriber_id"),
+                        resultSet.getString("status")
+                );
+            }
+            String message = "Subscription validation fetched successfully";
+            boolean subscribed = subscription != null && subscription.status == "ACCEPTED";
+
+            ValidateSubscriptionResp resp = new ValidateSubscriptionResp(true, message, valSub.creatorId, valSub.subscriberId, subscribed);
+            return resp;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            ValidateSubscriptionResp resp = new ValidateSubscriptionResp(false, e.getMessage(), null, null, null);
             return resp;
         }
     }

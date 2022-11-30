@@ -1,12 +1,10 @@
 package binotify.subscription;
 
-import binotify.request.ApproveOrRejectSubscriptionReq;
-import binotify.request.ListRequestSubscriptionReq;
-import binotify.request.RequestHeader;
-import binotify.request.RequestSubscriptionReq;
+import binotify.request.*;
 import binotify.response.ApproveOrRejectSubscriptionResp;
 import binotify.response.ListRequestSubscriptionResp;
 import binotify.response.RequestSubscriptionResp;
+import binotify.response.ValidateSubscriptionResp;
 import jakarta.jws.WebMethod;
 import jakarta.jws.WebParam;
 import jakarta.jws.WebService;
@@ -21,8 +19,17 @@ public interface ISubscription {
     );
 
     @WebMethod
-    public ApproveOrRejectSubscriptionResp approveOrRejectSubscription(@WebParam(name="request") ApproveOrRejectSubscriptionReq appOrRej);
+    public ApproveOrRejectSubscriptionResp approveOrRejectSubscription(
+            @WebParam(name="request") ApproveOrRejectSubscriptionReq appOrRej
+    );
 
     @WebMethod
-    public ListRequestSubscriptionResp listRequestSubscription(@WebParam(name="request") ListRequestSubscriptionReq listReqSub);
+    public ListRequestSubscriptionResp listRequestSubscription(
+            @WebParam(name="request") ListRequestSubscriptionReq listReqSub
+    );
+
+    @WebMethod
+    public ValidateSubscriptionResp validateSubscription(
+            @WebParam(name="request") ValidateSubscriptionReq valSub
+    );
 }
