@@ -78,8 +78,12 @@ public class Subscription implements ISubscription {
             String formattedSql = String.format(sql, appOrRejString, appOrRej.creatorId, appOrRej.subscriberId);
             int count = statement.executeUpdate(formattedSql);
             if (count == 1) {
-                this.callbackUpdateRequest(appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
+                boolean successCallback = this.callbackUpdateRequest(appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
+
                 String message = appOrRejString + " subscription successfully";
+                if (!successCallback) {
+                    message += " but callback failed";
+                }
                 return new ApproveOrRejectSubscriptionResp(true, message, appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
             } else {
                 String message = appOrRejString + " subscription failed";
@@ -121,62 +125,63 @@ public class Subscription implements ISubscription {
         }
     }
 
-    public static void callbackUpdateRequest(int creatorId, int subscriberId, String status) throws IOException, InterruptedException {
-//        ObjectMapper mapper = new ObjectMapper();
-//        HashMap<String, Object> params = new HashMap<>();
-//        params.put("creator_id", creatorId);
-//        params.put("subscriber_id", subscriberId);
-//        params.put("status", status);
-//
-//        String postDataString = mapper.writeValueAsString(getFormDataAsString(params)).replace(',', '&').replace(':', '=');
-//
-//        System.out.println(postDataString);
-//
-//        HttpClient client = HttpClient.newHttpClient();
-//        HttpRequest request = HttpRequest.newBuilder()
-////                .header("Content-Type", "application/json")
-//                .header("Authorization", System.getProperty("API_KEY"))
-//                .uri(URI.create(System.getProperty("BINOTIFY_APP_CALLBACK_URL")))
-//                .POST(HttpRequest.BodyPublishers.byt("param1=a&param2=b&param3=c".getBytes(StandardCharsets.UTF_8)))
-//                .build();
-//
-//        HttpResponse<String> response = client.send(request,
-//                HttpResponse.BodyHandlers.ofString());
-//
-//        System.out.println(response.statusCode());
-//        System.out.println(response.body());
-//        Map<String,Object> map = mapper.readValue(response.body(), Map.class);
+    public boolean callbackUpdateRequest(int creatorId, int subscriberId, String status) {
+        int statusCode = 0;
+        try {
+            URL url = new URL(System.getProperty("BINOTIFY_APP_CALLBACK_URL"));
 
-        URL url = new URL(System.getProperty("BINOTIFY_APP_CALLBACK_URL"));
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.setRequestMethod("POST");
-        con.setRequestProperty("Authorization", System.getProperty("API_KEY"));
-        Map<String, Object> parameters = new HashMap<>();
-        parameters.put("creator_id", creatorId);
-        parameters.put("subscriber_id", subscriberId);
-        parameters.put("status", status);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("POST");
+            con.setRequestProperty("Authorization", System.getProperty("API_KEY"));
 
-        con.setDoOutput(true);
-        DataOutputStream out = new DataOutputStream(con.getOutputStream());
-        out.writeBytes(getFormDataAsString(parameters));
-        out.flush();
-        out.close();
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("creator_id", creatorId);
+            parameters.put("subscriber_id", subscriberId);
+            parameters.put("status", status);
 
-        con.setConnectTimeout(5000);
-        con.setReadTimeout(5000);
+            con.setDoOutput(true);
+            DataOutputStream out = new DataOutputStream(con.getOutputStream());
+            out.writeBytes(getFormDataAsString(parameters));
+            out.flush();
+            out.close();
 
-        BufferedReader in = new BufferedReader(
-                new InputStreamReader(con.getInputStream()));
+            con.setConnectTimeout(5000);
+            con.setReadTimeout(5000);
+            statusCode = con.getResponseCode();
 
-        String inputLine;
-        StringBuffer content = new StringBuffer();
-        while ((inputLine = in.readLine()) != null) {
-            content.append(inputLine);
+            if (statusCode == 200) {
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(con.getInputStream()));
+
+                String inputLine;
+                StringBuffer content = new StringBuffer();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+
+                in.close();
+                System.out.println(content.toString());
+                return true;
+            } else if (statusCode == 400) {
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(con.getErrorStream()));
+
+                String inputLine;
+                StringBuffer content = new StringBuffer();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+
+                in.close();
+                System.out.println(content.toString());
+                return false;
+            }
+            return false;
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return false;
         }
-
-        in.close();
-        System.out.println(content.toString());
-
     }
 
     private static String getFormDataAsString(Map<String, Object> formData) {
