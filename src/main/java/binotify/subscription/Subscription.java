@@ -5,9 +5,12 @@ import binotify.request.*;
 import binotify.response.*;
 import binotify.security.Logger;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.xml.ws.developer.JAXWSProperties;
 import jakarta.annotation.Resource;
 import jakarta.jws.WebService;
 import jakarta.xml.ws.WebServiceContext;
+import jakarta.xml.ws.handler.MessageContext;
 
 import java.io.*;
 import java.net.*;
@@ -23,6 +26,9 @@ import java.util.*;
 
 @WebService(endpointInterface = "binotify.subscription.ISubscription")
 public class Subscription implements ISubscription {
+    @Resource
+    WebServiceContext wsContext;
+
     private Connection db_conn;
     private Logger logger;
 
@@ -34,6 +40,9 @@ public class Subscription implements ISubscription {
     @Override
     public RequestSubscriptionResp requestSubscription(RequestSubscriptionReq reqSub) {
         LocalDateTime timestamp = LocalDateTime.now();
+        MessageContext msgx = wsContext.getMessageContext();
+        String IPAddress = this.getRequestIPAddress(msgx);
+
         RequestSubscriptionReq req = reqSub;
         RequestSubscriptionResp resp = null;
 
@@ -56,13 +65,16 @@ public class Subscription implements ISubscription {
 //            e.printStackTrace();
             resp = new RequestSubscriptionResp(false, e.getMessage(), null, null, null);
         }
-        this.logger.generateLogging(timestamp, req, resp);
+        this.logger.generateLogging(timestamp, IPAddress, req, resp);
         return resp;
     }
 
     @Override
     public ApproveOrRejectSubscriptionResp approveOrRejectSubscription(ApproveOrRejectSubscriptionReq appOrRej) {
         LocalDateTime timestamp = LocalDateTime.now();
+        MessageContext msgx = wsContext.getMessageContext();
+        String IPAddress = this.getRequestIPAddress(msgx);
+
         ApproveOrRejectSubscriptionReq req = appOrRej;
         ApproveOrRejectSubscriptionResp resp = null;
 
@@ -99,13 +111,16 @@ public class Subscription implements ISubscription {
             e.printStackTrace();
             resp = new ApproveOrRejectSubscriptionResp(false, e.getMessage(), null, null, null);
         }
-        this.logger.generateLogging(timestamp, req, resp);
+        this.logger.generateLogging(timestamp, IPAddress, req, resp);
         return resp;
     }
 
     @Override
     public ListRequestSubscriptionResp listRequestSubscription(ListRequestSubscriptionReq listReqSub) {
         LocalDateTime timestamp = LocalDateTime.now();
+        MessageContext msgx = wsContext.getMessageContext();
+        String IPAddress = this.getRequestIPAddress(msgx);
+
         ListRequestSubscriptionReq req = listReqSub;
         ListRequestSubscriptionResp resp = null;
 
@@ -132,13 +147,16 @@ public class Subscription implements ISubscription {
             e.printStackTrace();
             resp = new ListRequestSubscriptionResp(false, e.getMessage(), null);
         }
-        this.logger.generateLogging(timestamp, req, resp);
+        this.logger.generateLogging(timestamp, IPAddress, req, resp);
         return resp;
     }
 
     @Override
     public ValidateSubscriptionResp validateSubscription(ValidateSubscriptionReq valSub) {
         LocalDateTime timestamp = LocalDateTime.now();
+        MessageContext msgx = wsContext.getMessageContext();
+        String IPAddress = this.getRequestIPAddress(msgx);
+
         ValidateSubscriptionReq req = valSub;
         ValidateSubscriptionResp resp = null;
 
@@ -169,7 +187,7 @@ public class Subscription implements ISubscription {
             e.printStackTrace();
             resp = new ValidateSubscriptionResp(false, e.getMessage(), null, null, null);
         }
-        this.logger.generateLogging(timestamp, req, resp);
+        this.logger.generateLogging(timestamp, IPAddress, req, resp);
         return resp;
     }
 
@@ -243,5 +261,12 @@ public class Subscription implements ISubscription {
             formBodyBuilder.append(URLEncoder.encode(singleEntry.getValue().toString(), StandardCharsets.UTF_8));
         }
         return formBodyBuilder.toString();
+    }
+
+    public String getRequestIPAddress(MessageContext msgx) {
+        HttpExchange exchange = (HttpExchange) msgx.get(JAXWSProperties.HTTP_EXCHANGE);
+        InetSocketAddress remoteAddress = exchange.getRemoteAddress();
+        InetAddress address = remoteAddress.getAddress();
+        return address.getHostAddress();
     }
 }

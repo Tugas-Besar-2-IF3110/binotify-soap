@@ -15,7 +15,7 @@ public class Logger {
         this.db_conn = db_conn;
     }
 
-    public void generateLogging(LocalDateTime timestamp, BaseRequest req, BaseResponse resp) {
+    public void generateLogging(LocalDateTime timestamp, String IPAddress, BaseRequest req, BaseResponse resp) {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         StringBuilder descriptionBuilder = new StringBuilder();
         String endpoint = "";
@@ -67,7 +67,7 @@ public class Logger {
             String sql = "INSERT INTO logging(description, IP, endpoint, requested_at) "
                     + "VALUES ('%s', '%s', '%s', '%s')";
 
-            String formattedSql = String.format(sql, description, "IP", endpoint, timestampString);
+            String formattedSql = String.format(sql, description, IPAddress, endpoint, timestampString);
             int count = statement.executeUpdate(formattedSql);
             if (count == 1) {
                 System.out.println("Logging added");
