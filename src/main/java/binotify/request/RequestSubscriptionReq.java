@@ -1,7 +1,6 @@
 package binotify.request;
 
-public class RequestSubscriptionReq {
-    public String API_KEY;
+public class RequestSubscriptionReq extends BaseRequest {
     public int creatorId;
     public int subscriberId;
 }
