@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import binotify.request.ValidateSubscriptionReq;
+import binotify.response.ValidateSubscriptionResp;
 import binotify.subscription.Subscription;
 import binotify.test.Demo;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -144,7 +144,7 @@ public class Subscription implements ISubscription {
                 );
             }
             String message = "Subscription validation fetched successfully";
-            boolean subscribed = subscription != null && subscription.status == "ACCEPTED";
+            boolean subscribed = subscription != null && subscription.status.equals("ACCEPTED");
 
             ValidateSubscriptionResp resp = new ValidateSubscriptionResp(true, message, valSub.creatorId, valSub.subscriberId, subscribed);
             return resp;
