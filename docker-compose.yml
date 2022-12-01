@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  db:
+    container_name: BINOTIFY_SOAP_DB
+    build:
+      context: ./docker_db
+    ports:
+      - "3309:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: habede
+      MYSQL_DATABASE: habede_soap
+      MYSQL_USER: habede
+      MYSQL_PASSWORD: habede
+  app:
+    container_name: BINOTIFY_SOAP
+    build: .
+    ports:
+      - "5001:5001"
+    env_file:
+      - /.env
+    depends_on:
+      - db
