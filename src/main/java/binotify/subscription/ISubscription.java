@@ -1,10 +1,7 @@
 package binotify.subscription;
 
 import binotify.request.*;
-import binotify.response.ApproveOrRejectSubscriptionResp;
-import binotify.response.ListRequestSubscriptionResp;
-import binotify.response.RequestSubscriptionResp;
-import binotify.response.ValidateSubscriptionResp;
+import binotify.response.*;
 import jakarta.jws.WebMethod;
 import jakarta.jws.WebParam;
 import jakarta.jws.WebService;
@@ -13,23 +10,28 @@ import jakarta.jws.soap.SOAPBinding;
 @WebService
 @SOAPBinding(style = SOAPBinding.Style.DOCUMENT)
 public interface ISubscription {
-    @WebMethod
+    @WebMethod(action = "\"requestSubscription\"")
     public RequestSubscriptionResp requestSubscription(
             @WebParam(name="request") RequestSubscriptionReq reqSub
     );
 
-    @WebMethod
+    @WebMethod(action = "\"approveOrRejectSubscription\"")
     public ApproveOrRejectSubscriptionResp approveOrRejectSubscription(
             @WebParam(name="request") ApproveOrRejectSubscriptionReq appOrRej
     );
 
-    @WebMethod
+    @WebMethod(action = "\"listRequestSubscription\"")
     public ListRequestSubscriptionResp listRequestSubscription(
             @WebParam(name="request") ListRequestSubscriptionReq listReqSub
     );
 
-    @WebMethod
+    @WebMethod(action = "\"validateSubscription\"")
     public ValidateSubscriptionResp validateSubscription(
             @WebParam(name="request") ValidateSubscriptionReq valSub
+    );
+
+    @WebMethod(action = "\"checkStatusRequest\"")
+    public CheckStatusRequestResp checkStatusRequest(
+            @WebParam(name="request") CheckStatusRequestReq csr
     );
 }

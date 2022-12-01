@@ -12,5 +12,6 @@ CREATE TABLE subscription (
     creator_id INT NOT NULL,
     subscriber_id INT NOT NULL,
     status ENUM ('PENDING', 'ACCEPTED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
+    is_polled BOOLEAN NOT NULL DEFAULT 0,
     PRIMARY KEY (creator_id, subscriber_id)
 );

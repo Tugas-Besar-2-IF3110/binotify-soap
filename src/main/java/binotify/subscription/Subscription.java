@@ -23,6 +23,9 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+
+import static com.sun.xml.ws.spi.db.BindingContextFactory.LOGGER;
 
 @WebService(endpointInterface = "binotify.subscription.ISubscription")
 public class Subscription implements ISubscription {
@@ -48,23 +51,24 @@ public class Subscription implements ISubscription {
 
         if (!System.getProperty("BINOTIFY_APP_API_KEY").equals(reqSub.API_KEY)) {
             resp = new RequestSubscriptionResp(false, "Not Authorized", null, null, null);
+        } else {
+            try {
+                Statement statement = this.db_conn.createStatement();
+                String sql = "INSERT INTO subscription(creator_id, subscriber_id, status) "
+                        + "VALUES (%d, %d, '%s')";
+                String formattedSql = String.format(sql, reqSub.creatorId, reqSub.subscriberId, "PENDING");
+                int count = statement.executeUpdate(formattedSql);
+                if (count == 1) {
+                    resp = new RequestSubscriptionResp(true, "Added new subscription request with status: PENDING", reqSub.creatorId, reqSub.subscriberId, "PENDING");
+                } else {
+                    resp = new RequestSubscriptionResp(true, "Subscription request failed", reqSub.creatorId, reqSub.subscriberId, null);
+                }
+            } catch (Exception e) {
+    //            e.printStackTrace();
+                resp = new RequestSubscriptionResp(false, e.getMessage(), null, null, null);
+            }
         }
 
-        try {
-            Statement statement = this.db_conn.createStatement();
-            String sql = "INSERT INTO subscription(creator_id, subscriber_id, status) "
-                    + "VALUES (%d, %d, '%s')";
-            String formattedSql = String.format(sql, reqSub.creatorId, reqSub.subscriberId, "PENDING");
-            int count = statement.executeUpdate(formattedSql);
-            if (count == 1) {
-                resp = new RequestSubscriptionResp(true, "Added new subscription request with status: PENDING", reqSub.creatorId, reqSub.subscriberId, "PENDING");
-            } else {
-                resp = new RequestSubscriptionResp(true, "Subscription request failed", reqSub.creatorId, reqSub.subscriberId, null);
-            }
-        } catch (Exception e) {
-//            e.printStackTrace();
-            resp = new RequestSubscriptionResp(false, e.getMessage(), null, null, null);
-        }
         this.logger.generateLogging(timestamp, IPAddress, req, resp);
         return resp;
     }
@@ -80,37 +84,54 @@ public class Subscription implements ISubscription {
 
         if (!System.getProperty("BINOTIFY_REST_API_KEY").equals(appOrRej.API_KEY)) {
             resp = new ApproveOrRejectSubscriptionResp(false, "Not Authorized", null, null, null);
-        }
+        } else {
+            try {
+                Statement statement = this.db_conn.createStatement();
+                String sql =
+                        "UPDATE subscription " +
+                        "SET status = '%s' " +
+                        "WHERE " +
+                        "creator_id = %d " +
+                        "AND subscriber_id = %d";
 
-        try {
-            Statement statement = this.db_conn.createStatement();
-            String sql =
-                    "UPDATE subscription " +
-                    "SET status = '%s' " +
-                    "WHERE " +
-                    "creator_id = %d " +
-                    "AND subscriber_id = %d";
+                String appOrRejString = appOrRej.approve ? "ACCEPTED": "REJECTED";
+                String formattedSql = String.format(sql, appOrRejString, appOrRej.creatorId, appOrRej.subscriberId);
+                int count = statement.executeUpdate(formattedSql);
+                if (count == 1) {
+                    boolean successCallback = this.callbackUpdateRequest(appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
 
-            String appOrRejString = appOrRej.approve ? "ACCEPTED": "REJECTED";
-            String formattedSql = String.format(sql, appOrRejString, appOrRej.creatorId, appOrRej.subscriberId);
-            int count = statement.executeUpdate(formattedSql);
-            if (count == 1) {
-                boolean successCallback = this.callbackUpdateRequest(appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
+                    String message = appOrRejString + " subscription successfully";
+                    if (!successCallback) {
+                        message += " but callback failed";
+                    } else {
+                        sql =
+                                "UPDATE subscription " +
+                                        "SET is_polled = %s " +
+                                        "WHERE " +
+                                        "creator_id = %d " +
+                                        "AND subscriber_id = %d";
 
-                String message = appOrRejString + " subscription successfully";
-                if (!successCallback) {
-                    message += " but callback failed";
+                        formattedSql = String.format(sql, "true", appOrRej.creatorId, appOrRej.subscriberId);
+                        count = statement.executeUpdate(formattedSql);
+
+                        if (count == 1) {
+                            System.out.println("Update is_polled successful");
+                        } else {
+                            System.out.println("Update is_polled failed");
+                        }
+                    }
+                    resp = new ApproveOrRejectSubscriptionResp(true, message, appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
+                } else {
+                    String message = appOrRejString + " subscription failed";
+                    resp = new ApproveOrRejectSubscriptionResp(false, message, appOrRej.creatorId, appOrRej.subscriberId, null);
                 }
-                resp = new ApproveOrRejectSubscriptionResp(true, message, appOrRej.creatorId, appOrRej.subscriberId, appOrRejString);
-            } else {
-                String message = appOrRejString + " subscription failed";
-                resp = new ApproveOrRejectSubscriptionResp(false, message, appOrRej.creatorId, appOrRej.subscriberId, null);
-            }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            resp = new ApproveOrRejectSubscriptionResp(false, e.getMessage(), null, null, null);
+            } catch (Exception e) {
+                e.printStackTrace();
+                resp = new ApproveOrRejectSubscriptionResp(false, e.getMessage(), null, null, null);
+            }
         }
+
         this.logger.generateLogging(timestamp, IPAddress, req, resp);
         return resp;
     }
@@ -126,27 +147,28 @@ public class Subscription implements ISubscription {
 
         if (!System.getProperty("BINOTIFY_REST_API_KEY").equals(listReqSub.API_KEY)) {
             resp = new ListRequestSubscriptionResp(false, "Not Authorized", null);
-        }
+        } else {
+            try {
+                Statement statement = this.db_conn.createStatement();
+                String sql = "SELECT * FROM subscription WHERE status = 'PENDING'";
+                ResultSet resultSet = statement.executeQuery(sql);
+                List<SubscriptionEntity> listResp = new ArrayList<SubscriptionEntity>();
+                while (resultSet.next()) {
+                    listResp.add(new SubscriptionEntity(
+                            resultSet.getInt("creator_id"),
+                            resultSet.getInt("subscriber_id"),
+                            resultSet.getString("status")
+                    ));
+                }
+                String message = "Subscription request list fetched successfully";
+                resp = new ListRequestSubscriptionResp(true, message, listResp);
 
-        try {
-            Statement statement = this.db_conn.createStatement();
-            String sql = "SELECT * FROM subscription WHERE status = 'PENDING'";
-            ResultSet resultSet = statement.executeQuery(sql);
-            List<SubscriptionEntity> listResp = new ArrayList<SubscriptionEntity>();
-            while (resultSet.next()) {
-                listResp.add(new SubscriptionEntity(
-                        resultSet.getInt("creator_id"),
-                        resultSet.getInt("subscriber_id"),
-                        resultSet.getString("status")
-                ));
+            } catch (Exception e) {
+                e.printStackTrace();
+                resp = new ListRequestSubscriptionResp(false, e.getMessage(), null);
             }
-            String message = "Subscription request list fetched successfully";
-            resp = new ListRequestSubscriptionResp(true, message, listResp);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            resp = new ListRequestSubscriptionResp(false, e.getMessage(), null);
         }
+
         this.logger.generateLogging(timestamp, IPAddress, req, resp);
         return resp;
     }
@@ -162,30 +184,75 @@ public class Subscription implements ISubscription {
 
         if (!System.getProperty("BINOTIFY_REST_API_KEY").equals(valSub.API_KEY)) {
             resp = new ValidateSubscriptionResp(false, "Not Authorized", null, null, null);
+        } else {
+            try {
+                Statement statement = this.db_conn.createStatement();
+                String sql = "SELECT * FROM subscription WHERE creator_id = " + valSub.creatorId
+                        + " AND subscriber_id = " + valSub.subscriberId;
+                ResultSet resultSet = statement.executeQuery(sql);
+
+                SubscriptionEntity subscription = null;
+                if (resultSet.next()) {
+                    subscription = new SubscriptionEntity(
+                            resultSet.getInt("creator_id"),
+                            resultSet.getInt("subscriber_id"),
+                            resultSet.getString("status")
+                    );
+                }
+                String message = "Subscription validation fetched successfully";
+                boolean subscribed = subscription != null && subscription.status.equals("ACCEPTED");
+
+                resp = new ValidateSubscriptionResp(true, message, valSub.creatorId, valSub.subscriberId, subscribed);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                resp = new ValidateSubscriptionResp(false, e.getMessage(), null, null, null);
+            }
         }
 
-        try {
-            Statement statement = this.db_conn.createStatement();
-            String sql = "SELECT * FROM subscription WHERE creator_id = " + valSub.creatorId
-                    + " AND subscriber_id = " + valSub.subscriberId;
-            ResultSet resultSet = statement.executeQuery(sql);
+        this.logger.generateLogging(timestamp, IPAddress, req, resp);
+        return resp;
+    }
 
-            SubscriptionEntity subscription = null;
-            if (resultSet.next()) {
-                subscription = new SubscriptionEntity(
-                        resultSet.getInt("creator_id"),
-                        resultSet.getInt("subscriber_id"),
-                        resultSet.getString("status")
-                );
+    @Override
+    public CheckStatusRequestResp checkStatusRequest(CheckStatusRequestReq csr) {
+        LocalDateTime timestamp = LocalDateTime.now();
+        MessageContext msgx = wsContext.getMessageContext();
+        String IPAddress = this.getRequestIPAddress(msgx);
+
+        CheckStatusRequestReq req = csr;
+        CheckStatusRequestResp resp = null;
+
+        if (!System.getProperty("BINOTIFY_APP_API_KEY").equals(csr.API_KEY)) {
+            resp = new CheckStatusRequestResp(false, "Not Authorized", null);
+        } else {
+            try {
+                Statement statement = this.db_conn.createStatement();
+                String query = "SELECT * FROM subscription WHERE is_polled = false";
+                if (csr.subscriberId != null) {
+                    query += " AND subscriber_id = " + csr.subscriberId;
+                }
+
+                if (csr.creatorId != null) {
+                    query += " AND creator_id = " + csr.creatorId;
+                }
+                ResultSet resultSet = statement.executeQuery(query);
+                List<SubscriptionEntity> listResp = new ArrayList<SubscriptionEntity>();
+                while (resultSet.next()) {
+                    listResp.add(new SubscriptionEntity(
+                            resultSet.getInt("creator_id"),
+                            resultSet.getInt("subscriber_id"),
+                            resultSet.getString("status")
+                    ));
+                }
+
+                String message = "Check status request list fetched successfully";
+                resp = new CheckStatusRequestResp(true, message, listResp);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                resp = new CheckStatusRequestResp(false, e.getMessage(), null);
             }
-            String message = "Subscription validation fetched successfully";
-            boolean subscribed = subscription != null && subscription.status.equals("ACCEPTED");
-
-            resp = new ValidateSubscriptionResp(true, message, valSub.creatorId, valSub.subscriberId, subscribed);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            resp = new ValidateSubscriptionResp(false, e.getMessage(), null, null, null);
         }
         this.logger.generateLogging(timestamp, IPAddress, req, resp);
         return resp;
