@@ -4,10 +4,15 @@ import binotify.entity.SubscriptionEntity;
 import binotify.request.*;
 import binotify.response.*;
 import binotify.security.Logger;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.xml.ws.developer.JAXWSProperties;
 import jakarta.annotation.Resource;
 import jakarta.jws.WebService;
+import jakarta.mail.*;
+import jakarta.mail.PasswordAuthentication;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.xml.ws.WebServiceContext;
 import jakarta.xml.ws.handler.MessageContext;
 
@@ -53,6 +58,7 @@ public class Subscription implements ISubscription {
                 int count = statement.executeUpdate(formattedSql);
                 if (count == 1) {
                     resp = new RequestSubscriptionResp(true, "Added new subscription request with status: PENDING", reqSub.creatorId, reqSub.subscriberId, "PENDING");
+                    notificationEmailAdmin();
                 } else {
                     resp = new RequestSubscriptionResp(true, "Subscription request failed", reqSub.creatorId, reqSub.subscriberId, null);
                 }
@@ -303,6 +309,114 @@ public class Subscription implements ISubscription {
 
                 in.close();
                 System.out.println(content.toString());
+                return true;
+            } else if (statusCode == 400) {
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(con.getErrorStream()));
+
+                String inputLine;
+                StringBuffer content = new StringBuffer();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+
+                in.close();
+                System.out.println(content.toString());
+                return false;
+            }
+            return false;
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean notificationEmailAdmin() {
+        int statusCode = 0;
+        try {
+            URL url = new URL(System.getProperty("BINOTIFY_REST_ADMIN_URL"));
+
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("POST");
+            con.setRequestProperty("Authorization", System.getProperty("API_KEY"));
+
+            Map<String, Object> parameters = new HashMap<>();
+
+            con.setDoOutput(true);
+            DataOutputStream out = new DataOutputStream(con.getOutputStream());
+            out.writeBytes(getFormDataAsString(parameters));
+            out.flush();
+            out.close();
+
+            con.setConnectTimeout(5000);
+            con.setReadTimeout(5000);
+            statusCode = con.getResponseCode();
+
+            if (statusCode == 200) {
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(con.getInputStream()));
+
+                String inputLine;
+                StringBuffer content = new StringBuffer();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+
+                in.close();
+                System.out.println(content.toString());
+
+                // Recipient's email ID needs to be mentioned.
+                String to = content.toString();
+
+                // Sender's email ID needs to be mentioned
+                String from = System.getProperty("MAIL_USERNAME");
+
+                // Assuming you are sending email from through gmails smtp
+                String host = "smtp.gmail.com";
+
+                // Get system properties
+                Properties properties = System.getProperties();
+
+                // Setup mail server
+                properties.put("mail.smtp.host", host);
+                properties.put("mail.smtp.port", "465");
+                properties.put("mail.smtp.ssl.enable", "true");
+                properties.put("mail.smtp.auth", "true");
+
+                // Get the Session object.// and pass username and password
+                Session session = Session.getInstance(properties, new jakarta.mail.Authenticator() {
+                    protected jakarta.mail.PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(System.getProperty("MAIL_USERNAME"), System.getProperty("MAIL_PASSWORD"));
+                    }
+                });
+
+                // Used to debug SMTP issues
+                session.setDebug(true);
+
+                try {
+                    // Create a default MimeMessage object.
+                    MimeMessage message = new MimeMessage(session);
+
+                    // Set From: header field of the header.
+                    message.setFrom(new InternetAddress(from));
+
+                    // Set To: header field of the header.
+                    message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
+
+                    // Set Subject: header field
+                    message.setSubject("This is the Subject Line!");
+
+                    // Now set the actual message
+                    message.setText("This is actual message");
+
+                    System.out.println("sending...");
+                    // Send message
+                    Transport.send(message);
+                    System.out.println("Sent message successfully....");
+                } catch (MessagingException mex) {
+                    mex.printStackTrace();
+                }
                 return true;
             } else if (statusCode == 400) {
                 BufferedReader in = new BufferedReader(
