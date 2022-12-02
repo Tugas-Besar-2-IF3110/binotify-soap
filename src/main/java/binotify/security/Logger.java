@@ -53,7 +53,23 @@ public class Logger {
                 );
                 endpoint = "Approve Or Reject Subscription";
 
+            }  else if (req instanceof CheckStatusRequestReq && resp instanceof CheckStatusRequestResp) {
+                CheckStatusRequestReq reqCasted = (CheckStatusRequestReq) req;
+                CheckStatusRequestResp respCasted = (CheckStatusRequestResp) resp;
+                descriptionBuilder.append("Request to check status request request for ");
+                if (!reqCasted.creatorId.equals(null) && !reqCasted.subscriberId.equals(null)) {
+                    descriptionBuilder.append("subscriber_id = " + reqCasted.subscriberId + " and creator_id = " + reqCasted.subscriberId);
+                } else if (!reqCasted.creatorId.equals(null)) {
+                    descriptionBuilder.append("creator_id = " + reqCasted.creatorId);
+                } else if (!reqCasted.subscriberId.equals(null)) {
+                    descriptionBuilder.append("creator_id = " + reqCasted.subscriberId);
+                }
+
+                endpoint = "Check Status Request";
+            } else {
+                descriptionBuilder.append("Invalid request format");
             }
+
             if (resp.success) {
                 descriptionBuilder.append(", successful");
             } else {

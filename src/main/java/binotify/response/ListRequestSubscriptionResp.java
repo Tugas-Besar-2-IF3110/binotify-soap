@@ -2,7 +2,6 @@ package binotify.response;
 
 import binotify.entity.SubscriptionEntity;
 
-import java.sql.ResultSet;
 import java.util.List;
 
 public class ListRequestSubscriptionResp extends BaseResponse {

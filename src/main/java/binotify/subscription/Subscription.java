@@ -4,7 +4,6 @@ import binotify.entity.SubscriptionEntity;
 import binotify.request.*;
 import binotify.response.*;
 import binotify.security.Logger;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.xml.ws.developer.JAXWSProperties;
 import jakarta.annotation.Resource;
@@ -14,18 +13,12 @@ import jakarta.xml.ws.handler.MessageContext;
 
 import java.io.*;
 import java.net.*;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
-
-import static com.sun.xml.ws.spi.db.BindingContextFactory.LOGGER;
 
 @WebService(endpointInterface = "binotify.subscription.ISubscription")
 public class Subscription implements ISubscription {
