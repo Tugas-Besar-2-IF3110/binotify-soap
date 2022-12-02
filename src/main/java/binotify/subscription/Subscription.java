@@ -221,7 +221,7 @@ public class Subscription implements ISubscription {
         } else {
             try {
                 Statement statement = this.db_conn.createStatement();
-                String query = "SELECT * FROM subscription WHERE is_polled = false";
+                String query = "SELECT * FROM subscription WHERE is_polled = 0";
                 if (csr.subscriberId != null) {
                     query += " AND subscriber_id = " + csr.subscriberId;
                 }
@@ -241,6 +241,22 @@ public class Subscription implements ISubscription {
 
                 String message = "Check status request list fetched successfully";
                 resp = new CheckStatusRequestResp(true, message, listResp);
+
+                String sql =
+                        "UPDATE subscription " +
+                        "SET is_polled = true " +
+                        "WHERE " +
+                        "is_polled = false AND status <> 'PENDING'";
+
+                if (csr.subscriberId != null) {
+                    sql += " AND subscriber_id = " + csr.subscriberId;
+                }
+
+                if (csr.creatorId != null) {
+                    sql += " AND creator_id = " + csr.creatorId;
+                }
+
+                int count = statement.executeUpdate(sql);
 
             } catch (Exception e) {
                 e.printStackTrace();

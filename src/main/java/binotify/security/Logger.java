@@ -57,12 +57,12 @@ public class Logger {
                 CheckStatusRequestReq reqCasted = (CheckStatusRequestReq) req;
                 CheckStatusRequestResp respCasted = (CheckStatusRequestResp) resp;
                 descriptionBuilder.append("Request to check status request request for ");
-                if (!reqCasted.creatorId.equals(null) && !reqCasted.subscriberId.equals(null)) {
+                if (reqCasted.creatorId != null && reqCasted.subscriberId != null) {
                     descriptionBuilder.append("subscriber_id = " + reqCasted.subscriberId + " and creator_id = " + reqCasted.subscriberId);
-                } else if (!reqCasted.creatorId.equals(null)) {
+                } else if (reqCasted.creatorId != null) {
                     descriptionBuilder.append("creator_id = " + reqCasted.creatorId);
-                } else if (!reqCasted.subscriberId.equals(null)) {
-                    descriptionBuilder.append("creator_id = " + reqCasted.subscriberId);
+                } else if (reqCasted.subscriberId != null) {
+                    descriptionBuilder.append("subscriber_id = " + reqCasted.subscriberId);
                 }
 
                 endpoint = "Check Status Request";
