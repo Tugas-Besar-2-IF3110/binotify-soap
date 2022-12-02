@@ -339,7 +339,7 @@ public class Subscription implements ISubscription {
 
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("POST");
-            con.setRequestProperty("Authorization", System.getProperty("API_KEY"));
+            con.setRequestProperty("Authorization", "Bearer " + System.getProperty("API_KEY"));
 
             Map<String, Object> parameters = new HashMap<>();
 
@@ -352,8 +352,9 @@ public class Subscription implements ISubscription {
             con.setConnectTimeout(5000);
             con.setReadTimeout(5000);
             statusCode = con.getResponseCode();
+            System.out.println(statusCode);
 
-            if (statusCode == 200) {
+            if (statusCode >= 200 && statusCode <= 299) {
                 BufferedReader in = new BufferedReader(
                         new InputStreamReader(con.getInputStream()));
 
@@ -405,10 +406,10 @@ public class Subscription implements ISubscription {
                     message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
 
                     // Set Subject: header field
-                    message.setSubject("This is the Subject Line!");
+                    message.setSubject("Notification!");
 
                     // Now set the actual message
-                    message.setText("This is actual message");
+                    message.setText("There is a new subscription request, please approve or reject!");
 
                     System.out.println("sending...");
                     // Send message
